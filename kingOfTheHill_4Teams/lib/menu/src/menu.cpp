@@ -16,6 +16,7 @@ This code is the property of Sindre Lindberg and may not be used, copied, or dis
 #include <Wire.h>
 #include <LiquidCrystal_PCF8574.h> // For I2C LCD
 #include <EEPROM.h>
+#include <TM1637Display.h> // For 7-segment displays
 
 /* #define MENU_BUTTON_ENTER TEAM_BUTTON_4
 #define MENU_BUTTON_BACK TEAM_BUTTON_2
@@ -26,6 +27,10 @@ This code is the property of Sindre Lindberg and may not be used, copied, or dis
 // Dispaly stuff
 // extern LiquidCrystal_PCF8574 lcd(0x27); // set the LCD address to 0x27 for a 16 chars and 2 line display
 extern LiquidCrystal_PCF8574 lcd;
+extern TM1637Display display1;
+extern TM1637Display display2;
+extern TM1637Display display3;
+extern TM1637Display display4;
 
 // Varius variables for menu navigation
 int menu_cursorPos = 1;
@@ -41,11 +46,17 @@ int last_subMenu0_cursorPos;
 int last_subMenu1_cursorPos;
 int last_subMenu1;
 int last_subMenu2;
+int menu_localCounter = 0; // To be used in a submenu if needed
 
 extern int s_KofH_pointsToWin;
 extern int s_KofH_numberOfTeams;
+extern bool s_KofH_activeTeams[4];
 extern int s_KofH_gameDuration;
 extern int s_KofH_delayedStartTime;
+
+// Custom 7-segment display symbols/characters
+extern uint8_t customSegment_ON[4];
+extern uint8_t customSegment_OFF[4];
 
 void menu::menuLoop()
 {
@@ -228,6 +239,7 @@ void menu::menuDisplay(int &cursorPos, int subM1, int subM2)
         case 2:
             snprintf(bufferLine1, BUFFERLENGTH, "1.1 PointsToWin");
             snprintf(bufferLine2, BUFFERLENGTH, "1.2 Teams");
+            menu_localCounter = s_KofH_numberOfTeams;
 
             break;
         case 3:
@@ -247,7 +259,7 @@ void menu::menuDisplay(int &cursorPos, int subM1, int subM2)
         }
         menuCursor(cursorPos, BUFFERLENGTH, bufferLine1, bufferLine2);
     }
-    // Menu 1.x actions:
+    // ---------- Menu 1.x actions:
     else if ((subM1 == 1) && (subM2 == 1))
     {
         if (last_cursorPos != cursorPos)
@@ -261,18 +273,136 @@ void menu::menuDisplay(int &cursorPos, int subM1, int subM2)
     {
         if (last_cursorPos != cursorPos)
         {
-            s_KofH_numberOfTeams = s_KofH_numberOfTeams + (cursorPos > last_cursorPos ? -1 : 1);
-            if (s_KofH_numberOfTeams < 2)
+            if (menu_localCounter == 2)
             {
-                s_KofH_numberOfTeams = 2; // Minimum 2 teams
+                menu_localCounter = 11;
+            }
+            else if (menu_localCounter == 3)
+            {
+                menu_localCounter = 17;
+            }
+            else if (menu_localCounter == 4)
+            {
+                menu_localCounter = 21;
+            }
+
+            menu_localCounter = menu_localCounter + (cursorPos > last_cursorPos ? -1 : 1);
+
+            if (menu_localCounter < 11)
+            {
+                menu_localCounter = 11; // Minimum 2 teams
                 cursorPos--;
             }
-            else if (s_KofH_numberOfTeams > 4)
+            else if (s_KofH_numberOfTeams > 21)
             {
-                s_KofH_numberOfTeams = 4; // Maximum 4 teams
+                menu_localCounter = 21; // Maximum 4 teams
                 cursorPos++;
             }
+            // Set number of teams
+            if (menu_localCounter < 17)
+            {
+                s_KofH_numberOfTeams = 2;
+            }
+            else if (menu_localCounter >= 17 && menu_localCounter < 21)
+            {
+                s_KofH_numberOfTeams = 3;
+            }
+            else if (menu_localCounter >= 21)
+            {
+                s_KofH_numberOfTeams = 4;
+            }
+
+            // Handle active teams
+            switch (menu_localCounter)
+            {
+            case 11:
+                s_KofH_activeTeams[0] = true;
+                s_KofH_activeTeams[1] = true;
+                s_KofH_activeTeams[2] = false;
+                s_KofH_activeTeams[3] = false;
+                s_KofH_numberOfTeams = 2;
+                break;
+            case 12:
+                s_KofH_activeTeams[0] = true;
+                s_KofH_activeTeams[1] = false;
+                s_KofH_activeTeams[2] = true;
+                s_KofH_activeTeams[3] = false;
+                s_KofH_numberOfTeams = 2;
+                break;
+            case 13:
+                s_KofH_activeTeams[0] = true;
+                s_KofH_activeTeams[1] = false;
+                s_KofH_activeTeams[2] = false;
+                s_KofH_activeTeams[3] = true;
+                s_KofH_numberOfTeams = 2;
+                break;
+            case 14:
+                s_KofH_activeTeams[0] = false;
+                s_KofH_activeTeams[1] = true;
+                s_KofH_activeTeams[2] = true;
+                s_KofH_activeTeams[3] = false;
+                s_KofH_numberOfTeams = 2;
+                break;
+            case 15:
+                s_KofH_activeTeams[0] = false;
+                s_KofH_activeTeams[1] = true;
+                s_KofH_activeTeams[2] = false;
+                s_KofH_activeTeams[3] = true;
+                s_KofH_numberOfTeams = 2;
+                break;
+            case 16:
+                s_KofH_activeTeams[0] = false;
+                s_KofH_activeTeams[1] = false;
+                s_KofH_activeTeams[2] = true;
+                s_KofH_activeTeams[3] = true;
+                s_KofH_numberOfTeams = 2;
+                break;
+            case 17:
+                s_KofH_activeTeams[0] = true;
+                s_KofH_activeTeams[1] = true;
+                s_KofH_activeTeams[2] = true;
+                s_KofH_activeTeams[3] = false;
+                s_KofH_numberOfTeams = 3;
+                break;
+            case 18:
+                s_KofH_activeTeams[0] = true;
+                s_KofH_activeTeams[1] = true;
+                s_KofH_activeTeams[2] = false;
+                s_KofH_activeTeams[3] = true;
+                s_KofH_numberOfTeams = 3;
+                break;
+            case 19:
+                s_KofH_activeTeams[0] = true;
+                s_KofH_activeTeams[1] = false;
+                s_KofH_activeTeams[2] = true;
+                s_KofH_activeTeams[3] = true;
+                s_KofH_numberOfTeams = 3;
+                break;
+            case 20:
+                s_KofH_activeTeams[0] = false;
+                s_KofH_activeTeams[1] = true;
+                s_KofH_activeTeams[2] = true;
+                s_KofH_activeTeams[3] = true;
+                s_KofH_numberOfTeams = 3;
+                break;
+            case 21:
+                s_KofH_activeTeams[0] = true;
+                s_KofH_activeTeams[1] = true;
+                s_KofH_activeTeams[2] = true;
+                s_KofH_activeTeams[3] = true;
+                s_KofH_numberOfTeams = 4;
+                break;
+            
+            default:
+                break;
+            }
         }
+
+        (s_KofH_activeTeams[0]) ? display1.setSegments(customSegment_ON, 4, 0) : display1.setSegments(customSegment_OFF, 4, 0);
+        (s_KofH_activeTeams[1]) ? display2.setSegments(customSegment_ON, 4, 0) : display2.setSegments(customSegment_OFF, 4, 0);
+        (s_KofH_activeTeams[2]) ? display3.setSegments(customSegment_ON, 4, 0) : display3.setSegments(customSegment_OFF, 4, 0);
+        (s_KofH_activeTeams[3]) ? display4.setSegments(customSegment_ON, 4, 0) : display4.setSegments(customSegment_OFF, 4, 0);
+
         snprintf(bufferLine1, BUFFERLENGTH, "1.2 Teams");
         snprintf(bufferLine2, BUFFERLENGTH, "  > %d", s_KofH_numberOfTeams);
     }
@@ -288,7 +418,7 @@ void menu::menuDisplay(int &cursorPos, int subM1, int subM2)
             }
         }
         snprintf(bufferLine1, BUFFERLENGTH, "1.3 Duration");
-        snprintf(bufferLine2, BUFFERLENGTH, "  > %dmin %ds", s_KofH_gameDuration/60, s_KofH_gameDuration%60);
+        snprintf(bufferLine2, BUFFERLENGTH, "  > %dmin %ds", s_KofH_gameDuration / 60, s_KofH_gameDuration % 60);
     }
     else if ((subM1 == 1) && (subM2 == 4))
     {
@@ -361,7 +491,7 @@ void menu::menuDisplay(int &cursorPos, int subM1, int subM2)
         menuCursor(2, BUFFERLENGTH, bufferLine1, bufferLine2); // Force cursor to be on second line (Y/N - line)
     }
 
-    // Menu 4.x actions:
+    // ---------- Menu 4.x actions:
     else if ((subM1 == 4) && (subM2 == 1))
     {
         FLAG_forMenu_back = true;
@@ -401,4 +531,3 @@ void menu::menuDisplay(int &cursorPos, int subM1, int subM2)
         FLAG_shortFreeze = false;
     }
 }
-  

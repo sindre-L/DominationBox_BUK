@@ -97,6 +97,10 @@ byte dotOff[] = {0b00000, 0b01110, 0b10001, 0b10001, // Custom Character for dot
 byte dotOn[] = {0b00000, 0b01110, 0b11111, 0b11111, // Custom Character for dot
                 0b11111, 0b01110, 0b00000, 0b00000};
 
+// Custom 7-segment display symbols/characters
+uint8_t customSegment_ON[4] = {0b0000000, 0b0111111, 0b1010100, 0b0000000};
+uint8_t customSegment_OFF[4] = {0b0000000, 0b0111111, 0b1110001, 0b1110001};
+
 // Extern functions and variables
 extern void settings_save();
 extern void settings_read();
@@ -140,6 +144,10 @@ void setup()
   myMenu.MENU_BUTTON_BACK = TEAM_BUTTON_4;
   myMenu.MENU_BUTTON_UP = TEAM_BUTTON_1;
   myMenu.MENU_BUTTON_DOWN = TEAM_BUTTON_3;
+  myMenu.MENU_BUTTON_1 = TEAM_BUTTON_1;
+  myMenu.MENU_BUTTON_2 = TEAM_BUTTON_2;
+  myMenu.MENU_BUTTON_3 = TEAM_BUTTON_3;
+  myMenu.MENU_BUTTON_4 = TEAM_BUTTON_4;
 
   // LCD setup
   lcd.begin(16, 2); // initialize the lcd
@@ -211,6 +219,10 @@ void loop()
     // Initialize game settings
     myGame.pointsToWin = s_KofH_pointsToWin;
     myGame.numberOfTeams = s_KofH_numberOfTeams;
+    myGame.activeTeams[0] = s_KofH_activeTeams[0];
+    myGame.activeTeams[1] = s_KofH_activeTeams[1];
+    myGame.activeTeams[2] = s_KofH_activeTeams[2];
+    myGame.activeTeams[3] = s_KofH_activeTeams[3];
     myGame.gameDuration = s_KofH_gameDuration;
 
     for (;;)
@@ -241,10 +253,16 @@ void loop()
           lastMillis = millis(); // update lastMillis
 
           // Update segment displays
-          display1.showNumberDec(myGame.pointsTeam1);
+          myGame.activeTeams[0] ? display1.showNumberDec(myGame.pointsTeam1) : display1.setSegments(customSegment_OFF);
+          myGame.activeTeams[1] ? display2.showNumberDec(myGame.pointsTeam2) : display2.setSegments(customSegment_OFF);
+          myGame.activeTeams[2] ? display3.showNumberDec(myGame.pointsTeam3) : display3.setSegments(customSegment_OFF);
+          myGame.activeTeams[3] ? display4.showNumberDec(myGame.pointsTeam4) : display4.setSegments(customSegment_OFF);
+          
+
+       /*    display1.showNumberDec(myGame.pointsTeam1);
           display2.showNumberDec(myGame.pointsTeam2);
           display3.showNumberDec(myGame.pointsTeam3);
-          display4.showNumberDec(myGame.pointsTeam4);
+          display4.showNumberDec(myGame.pointsTeam4); */
 
           // Update LCD
           if (myGame.FLAG_gameEnded)
@@ -319,5 +337,3 @@ void loop()
     }
   } */
 }
-
-

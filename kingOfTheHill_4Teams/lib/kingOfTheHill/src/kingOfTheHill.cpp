@@ -81,22 +81,22 @@ int game::KofH::kingOfTheHill(void)
     if (!FLAG_gameEnded)
     {
         // Read Button inputs and set KofH.inControlOfPoint accordingly
-        if (digitalRead(PIN_TEAM1_BUTTON) == HIGH)
+        if ((digitalRead(PIN_TEAM1_BUTTON) == HIGH) && activeTeams[0])
         {
             inControlOfPoint = Team1;
             // Serial.println("Team1");
         }
-        if (digitalRead(PIN_TEAM2_BUTTON) == HIGH)
+        if ((digitalRead(PIN_TEAM2_BUTTON) == HIGH) && activeTeams[1])
         {
             inControlOfPoint = Team2;
             // Serial.println("Team2");
         }
-        if (digitalRead(PIN_TEAM3_BUTTON) == HIGH)
+        if ((digitalRead(PIN_TEAM3_BUTTON) == HIGH) && activeTeams[2])
         {
             inControlOfPoint = Team3;
             // Serial.println("Team3");
         }
-        if (digitalRead(PIN_TEAM4_BUTTON) == HIGH)
+        if ((digitalRead(PIN_TEAM4_BUTTON) == HIGH) && activeTeams[3])
         {
             inControlOfPoint = Team4;
             // Serial.println("Team4");

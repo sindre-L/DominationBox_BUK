@@ -41,6 +41,7 @@ public:
         unsigned long gameDuration = 900; // in seconds
         int pointsToWin = 600;            // one point per second
         uint8_t numberOfTeams = 4;
+        bool activeTeams[4] = {true, true, true, true};
         // settings_KofH.TeamColourRGBW first index: Team(neut,1,2,3,4), second index: colour(R, G, B, W) with value 0-255
         uint8_t teamColourRGBW[5][4] = {{0, 255, 0, 0}, {255, 0, 0, 0}, {0, 0, 255, 0}, {255, 30, 0, 0}, {155, 155, 155, 255}};
 

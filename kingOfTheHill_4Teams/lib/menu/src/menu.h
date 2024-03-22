@@ -11,6 +11,11 @@ public:
     void menuLoop(void);
 
     // variables for menu navigation
+    uint8_t MENU_BUTTON_1; // Corresponds to the "Team 1" button
+    uint8_t MENU_BUTTON_2; // Corresponds to the "Team 2" button
+    uint8_t MENU_BUTTON_3; // Corresponds to the "Team 3" button
+    uint8_t MENU_BUTTON_4; // Corresponds to the "Team 4" button
+
     uint8_t MENU_BUTTON_ENTER;
     uint8_t MENU_BUTTON_BACK;
     uint8_t MENU_BUTTON_UP;
