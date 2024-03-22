@@ -1,0 +1,323 @@
+/*
+Author: Sindre Lindberg
+Date: 2024-03-17
+Project: King of the Hill
+
+Description:
+Developed for, and intended to be used in, airsoft games arranged by Brunstad Ungdoms Klupp (BUK).
+
+Copyright:
+This code is the property of Sindre Lindberg and may not be used, copied, or distributed without permission.
+*/
+
+#include <Arduino.h>
+#include <kingOfTheHill.h> // Project specific
+#include <menu.h>          // Project specific
+#include <settings.h>      // Project specific
+#include <Wire.h>
+#include <LiquidCrystal_PCF8574.h> // For I2C LCD
+#include <TM1637Display.h>         // For 7-segment displays
+
+#define INTERNAL_LED0_J101_R 8
+#define INTERNAL_LED0_J101_G 9
+#define INTERNAL_LED0_J101_B 10
+
+#define INTERNAL_LED1_J102_R 11
+#define INTERNAL_LED1_J102_G 12
+#define INTERNAL_LED1_J102_B 13
+
+#define EXTERNAL_LED_J103_R 4
+#define EXTERNAL_LED_J103_G 5
+#define EXTERNAL_LED_J103_B 6
+#define EXTERNAL_LED_J103_W 7
+
+#define TEAM_BUTTON_1 A0
+#define TEAM_BUTTON_2 A1
+#define TEAM_BUTTON_3 A2
+#define TEAM_BUTTON_4 A3
+
+#define STOP_BUTTON A4
+
+#define SPI_J105_TX1 18
+#define SPI_J105_RX1 19
+#define SPI_J105_D1 22
+
+#define SPI_J106_TX2 16
+#define SPI_J106_RX2 17
+#define SPI_J106_D2 23
+
+#define SPI_J107_TX3 14
+#define SPI_J107_RX3 15
+#define SPI_J107_D3 24
+
+#define LCD0_J113_1 26 // DIO display 1
+#define LCD0_J113_2 27 // CLK display 1
+#define LCD0_J113_3 28 // DIO display 2
+#define LCD0_J113_4 29 // CLK display 2
+#define LCD0_J113_5 30 // DIO display 3
+#define LCD0_J113_6 31 // CLK display 3
+#define LCD0_J113_7 32 // DIO display 4
+#define LCD0_J113_8 33 // CLK display 4
+#define LCD0_J113_9 34
+#define LCD0_J113_10 35
+
+#define LCD_1_DIO LCD0_J113_1 // DIO display 1
+#define LCD_1_CLK LCD0_J113_2 // CLK display 1
+#define LCD_2_DIO LCD0_J113_3 // DIO display 2
+#define LCD_2_CLK LCD0_J113_4 // CLK display 2
+#define LCD_3_DIO LCD0_J113_5 // DIO display 3
+#define LCD_3_CLK LCD0_J113_6 // CLK display 3
+#define LCD_4_DIO LCD0_J113_7 // DIO display 4
+#define LCD_4_CLK LCD0_J113_8 // CLK display 4
+TM1637Display display1(LCD_1_CLK, LCD_1_DIO);
+TM1637Display display2(LCD_2_CLK, LCD_2_DIO);
+TM1637Display display3(LCD_3_CLK, LCD_3_DIO);
+TM1637Display display4(LCD_4_CLK, LCD_4_DIO);
+
+#define LCD1_J114_1 36
+#define LCD1_J114_2 37
+#define LCD1_J114_3 38
+#define LCD1_J114_4 39
+#define LCD1_J114_5 40
+#define LCD1_J114_6 41
+#define LCD1_J114_7 42
+#define LCD1_J114_8 43
+#define LCD1_J114_9 44
+#define LCD1_J114_10 45
+
+#define SMOKE_PIN 25
+
+game::KofH myGame;
+menu myMenu;
+
+// Dispaly stuff
+LiquidCrystal_PCF8574 lcd(0x27);                     // set the LCD address to 0x27 for a 16 chars and 2 line display
+byte dotOff[] = {0b00000, 0b01110, 0b10001, 0b10001, // Custom Character for dotOff
+                 0b10001, 0b01110, 0b00000, 0b00000};
+byte dotOn[] = {0b00000, 0b01110, 0b11111, 0b11111, // Custom Character for dot
+                0b11111, 0b01110, 0b00000, 0b00000};
+
+// Extern functions and variables
+extern void settings_save();
+extern void settings_read();
+extern void settings_initiateDefault();
+
+// Variables for game
+int pointsTeam1 = 0;
+int pointsTeam2 = 0;
+int pointsTeam3 = 0;
+int pointsTeam4 = 0;
+int winningTeam = 0;
+
+// Other Variables
+bool FLAG_EnterMenu = false;
+
+void setup()
+{
+  // put your setup code here, to run once:
+  pinMode(INTERNAL_LED0_J101_R, OUTPUT);
+  pinMode(INTERNAL_LED0_J101_G, OUTPUT);
+  pinMode(INTERNAL_LED0_J101_B, OUTPUT);
+
+  pinMode(INTERNAL_LED1_J102_R, OUTPUT);
+  pinMode(INTERNAL_LED1_J102_G, OUTPUT);
+  pinMode(INTERNAL_LED1_J102_B, OUTPUT);
+
+  pinMode(EXTERNAL_LED_J103_R, OUTPUT);
+  pinMode(EXTERNAL_LED_J103_G, OUTPUT);
+  pinMode(EXTERNAL_LED_J103_B, OUTPUT);
+  pinMode(EXTERNAL_LED_J103_W, OUTPUT);
+
+  pinMode(TEAM_BUTTON_1, INPUT);
+  pinMode(TEAM_BUTTON_2, INPUT);
+  pinMode(TEAM_BUTTON_3, INPUT);
+  pinMode(TEAM_BUTTON_4, INPUT);
+
+  pinMode(SMOKE_PIN, OUTPUT);
+  digitalWrite(SMOKE_PIN, HIGH);
+
+  myMenu.MENU_BUTTON_ENTER = TEAM_BUTTON_2;
+  myMenu.MENU_BUTTON_BACK = TEAM_BUTTON_4;
+  myMenu.MENU_BUTTON_UP = TEAM_BUTTON_1;
+  myMenu.MENU_BUTTON_DOWN = TEAM_BUTTON_3;
+
+  // LCD setup
+  lcd.begin(16, 2); // initialize the lcd
+
+  lcd.createChar(1, dotOff);
+  lcd.createChar(2, dotOn);
+  // LCD setup end
+
+  // Segment display setup
+  // Display testing-code here
+  display1.setBrightness(0x0f);
+  display1.showNumberDec(0001);
+  display2.setBrightness(0x0f);
+  display2.showNumberDec(0002);
+  display3.setBrightness(0x0f);
+  display3.showNumberDec(0003);
+  display4.setBrightness(0x0f);
+  display4.showNumberDec(0004);
+  // Segment display setup end
+
+  Serial.begin(9600);
+
+  settings_read();
+
+  for (int i = 0; i < 5; i++)
+  {
+    char buffer[20];
+    int cntDwn = 5 - i;
+    sprintf(buffer, "Counting down %d\n\n", cntDwn);
+    Serial.print(buffer);
+    delay(500);
+  }
+
+  // If a button is pressed, set Flag high, and enter "menu-mode" for access to settings.
+  if (digitalRead(myMenu.MENU_BUTTON_ENTER) || digitalRead(myMenu.MENU_BUTTON_UP) || digitalRead(myMenu.MENU_BUTTON_DOWN) || digitalRead(myMenu.MENU_BUTTON_BACK))
+  {
+    FLAG_EnterMenu = true;
+    settings_initiateDefault();
+  }
+
+  // Set display text
+  lcd.setBacklight(155);
+  lcd.home();
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Press button for");
+  lcd.setCursor(0, 1);
+  lcd.print("Team 1 to start");
+}
+
+void loop()
+{
+  // If benu-button is pressed at power-up, enter menu. Restart device to enter game-mode.
+  if (FLAG_EnterMenu)
+  {
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("Entering menu...");
+    delay(2000);
+
+    myMenu.menuLoop(); // Enter infinite loop. Restart device to get out of it. (only to be entered at startup)
+  }
+
+  // Enter loop for a game-mode if apropiate button is pressed:
+
+  // KofH
+  if (digitalRead(TEAM_BUTTON_1))
+  {
+    // Initialize game settings
+    myGame.pointsToWin = s_KofH_pointsToWin;
+    myGame.numberOfTeams = s_KofH_numberOfTeams;
+    myGame.gameDuration = s_KofH_gameDuration;
+
+    for (;;)
+    {
+      static int delayTime = s_KofH_delayedStartTime;
+      if (delayTime > 0)
+      {
+        lcd.clear();
+        lcd.setCursor(0, 0);
+        lcd.print("Game starts in:");
+        lcd.setCursor(0, 1);
+        lcd.print(delayTime);
+        lcd.print("s");
+        delayTime--;
+        (delayTime % 2 == 0) ? game::analogWrite_Team_ToExtLED(myGame.teamColourRGBW, game::Neutral) : game::digitalWrite_OFF_ToExtLED();
+        delay(500);
+        (delayTime % 2 == 0) ? game::analogWrite_Team_ToExtLED(myGame.teamColourRGBW, game::Neutral) : game::digitalWrite_OFF_ToExtLED();
+        delay(500);
+      }
+      else
+      {
+
+        myGame.kingOfTheHill(); // must run continuously during a game to update state and stats (is not a loop)
+
+        static uint32_t lastMillis = 0;
+        if (millis() - lastMillis > 500)
+        {
+          lastMillis = millis(); // update lastMillis
+
+          // Update segment displays
+          display1.showNumberDec(myGame.pointsTeam1);
+          display2.showNumberDec(myGame.pointsTeam2);
+          display3.showNumberDec(myGame.pointsTeam3);
+          display4.showNumberDec(myGame.pointsTeam4);
+
+          // Update LCD
+          if (myGame.FLAG_gameEnded)
+          {
+            lcd.clear();
+            lcd.setCursor(0, 0);
+            lcd.print("Game ended!");
+            lcd.setCursor(0, 1);
+            if (myGame.winningTeam == 0)
+            {
+              lcd.print("No winner!");
+            }
+            else
+            {
+              lcd.print("Team ");
+              lcd.print(myGame.winningTeam);
+              lcd.print(" won!");
+            }
+          }
+          else
+          {
+            lcd.clear();
+            lcd.setCursor(0, 0);
+            if (myGame.leadingTeam == 0)
+            {
+              lcd.print("No team leading");
+            }
+            else
+            {
+              lcd.print("Team ");
+              lcd.print(myGame.leadingTeam);
+              lcd.print(" leading!");
+            }
+            lcd.setCursor(0, 1);
+            if (myGame.gameDuration - myGame.gameTimeElapsed > 60)
+            {
+              lcd.print("Time left: ");
+              lcd.print((myGame.gameDuration - myGame.gameTimeElapsed) / 60);
+              lcd.print("min");
+            }
+            else
+            {
+              lcd.print("Time left: ");
+              lcd.print(myGame.gameDuration - myGame.gameTimeElapsed);
+              lcd.print("s");
+            }
+          }
+        }
+      }
+    }
+  }
+  /*
+  else if (digitalRead(TEAM_BUTTON_2))
+  {
+    for (;;)
+    {
+      Serial.println("Button 2 pressed");
+    }
+  }
+  else if (digitalRead(TEAM_BUTTON_3))
+  {
+    for (;;)
+    {
+      Serial.println("Button 3 pressed");
+    }
+  }
+  else if (digitalRead(TEAM_BUTTON_4))
+  {
+    for (;;)
+    {
+      Serial.println("Button 4 pressed");
+    }
+  } */
+}
+
+

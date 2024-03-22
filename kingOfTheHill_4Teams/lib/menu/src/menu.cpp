@@ -1,0 +1,404 @@
+/*
+Author: Sindre Lindberg
+Date: 2024-03-17
+Project: King of the Hill
+
+Description:
+Developed for, and intended to be used in, airsoft games arranged by Brunstad Ungdoms Klupp (BUK).
+
+Copyright:
+This code is the property of Sindre Lindberg and may not be used, copied, or distributed without permission.
+*/
+
+#include "Arduino.h"
+#include <menu.h>
+#include <settings.h>
+#include <Wire.h>
+#include <LiquidCrystal_PCF8574.h> // For I2C LCD
+#include <EEPROM.h>
+
+/* #define MENU_BUTTON_ENTER TEAM_BUTTON_4
+#define MENU_BUTTON_BACK TEAM_BUTTON_2
+#define MENU_BUTTON_UP TEAM_BUTTON_1
+#define MENU_BUTTON_DOWN TEAM_BUTTON_3 */
+#define BUFFERLENGTH 100
+
+// Dispaly stuff
+// extern LiquidCrystal_PCF8574 lcd(0x27); // set the LCD address to 0x27 for a 16 chars and 2 line display
+extern LiquidCrystal_PCF8574 lcd;
+
+// Varius variables for menu navigation
+int menu_cursorPos = 1;
+int last_cursorPos = 0;
+uint8_t subMenu1 = 0;
+uint8_t subMenu2 = 0;
+bool FLAG_forMenu_enter = false;
+bool FLAG_forMenu_back = false;
+bool FLAG_shortFreeze = false;
+char intermidiateBuffer[BUFFERLENGTH];
+
+int last_subMenu0_cursorPos;
+int last_subMenu1_cursorPos;
+int last_subMenu1;
+int last_subMenu2;
+
+extern int s_KofH_pointsToWin;
+extern int s_KofH_numberOfTeams;
+extern int s_KofH_gameDuration;
+extern int s_KofH_delayedStartTime;
+
+void menu::menuLoop()
+{
+    for (;;)
+    {
+        // Updates menu navigation flags for "enter" and "back"
+        menuEnterBackUpdate(FLAG_forMenu_enter, FLAG_forMenu_back, MENU_BUTTON_ENTER, MENU_BUTTON_BACK);
+        menuCursorUpdate(menu_cursorPos, MENU_BUTTON_UP, MENU_BUTTON_DOWN); // Updates menu_cursorPos
+
+        // Controls actions when "Enter" is pressed.
+        if (FLAG_forMenu_enter) // "Enter"
+        {
+            FLAG_forMenu_enter = false;
+            subMenu2 = ((subMenu1 != 0) && (subMenu2 == 0)) ? menu_cursorPos : subMenu2;
+            subMenu1 = (subMenu1 == 0) ? menu_cursorPos : subMenu1;
+            menu_cursorPos = 1;
+            last_cursorPos = 1;
+        }
+        // Controls actions when "Back" is pressed.
+        else if (FLAG_forMenu_back) // "Back"
+        {
+            FLAG_forMenu_back = false;
+            subMenu1 = (subMenu2 == 0) ? 0 : subMenu1;
+            subMenu2 = 0;
+            last_cursorPos = 0;
+
+            // Reset cursor position to last position in comming submenu
+            if ((subMenu1 == 0) && (subMenu2 == 0))
+            {
+                menu_cursorPos = last_subMenu0_cursorPos;
+            }
+            else if ((subMenu1 != 0) && (subMenu2 == 0))
+            {
+                menu_cursorPos = last_subMenu1_cursorPos;
+            }
+        }
+
+        if ((last_cursorPos != menu_cursorPos) || (last_subMenu1 != subMenu1) || (last_subMenu2 != subMenu2))
+        {
+            menuDisplay(menu_cursorPos, subMenu1, subMenu2);
+            last_cursorPos = menu_cursorPos;
+            last_subMenu1 = subMenu1;
+            last_subMenu2 = subMenu2;
+        }
+    }
+}
+
+// Reads digital pin and sets flags for menu navigation. Flag must be reset outside of this function.
+void menu::menuEnterBackUpdate(bool &FLAG_enter_true, bool &FLAG_back_true, uint8_t PIN_BUTTON_FOR_ENTER, uint8_t PIN_BUTTON_FOR_BACK)
+{
+    if (digitalRead(PIN_BUTTON_FOR_ENTER) == HIGH)
+    {
+        FLAG_enter_true = true;
+        delay(300); // debounce
+    }
+    else if ((digitalRead(PIN_BUTTON_FOR_BACK) == HIGH))
+    {
+        FLAG_back_true = true;
+        delay(300); // debounce
+    }
+}
+
+// Reads digital pins and increments/decrements menu_cursorPos. Roll-over is not implemented.
+void menu::menuCursorUpdate(int &cursorPos, uint8_t PIN_BUTTON_FOR_UP, uint8_t PIN_BUTTON_FOR_DOWN)
+{
+    if (digitalRead(PIN_BUTTON_FOR_UP) == HIGH)
+    {
+        last_cursorPos = cursorPos;
+        cursorPos++;
+        delay(300); // debounce
+
+        // Keep track of last cursor position in each submenu
+        if ((subMenu1 == 0) && (subMenu2 == 0))
+        {
+            last_subMenu0_cursorPos = cursorPos;
+        }
+        else if ((subMenu1 != 0) && (subMenu2 == 0))
+        {
+            last_subMenu1_cursorPos = cursorPos;
+        }
+    }
+    else if (digitalRead(PIN_BUTTON_FOR_DOWN) == HIGH)
+    {
+        last_cursorPos = cursorPos;
+        cursorPos--;
+        delay(300); // debounce
+
+        // Keep track of last cursor position in each submenu
+        if ((subMenu1 == 0) && (subMenu2 == 0))
+        {
+            last_subMenu0_cursorPos = cursorPos;
+        }
+        else if ((subMenu1 != 0) && (subMenu2 == 0))
+        {
+            last_subMenu1_cursorPos = cursorPos;
+        }
+    }
+}
+
+// Indent and mark with a cursor ('>') the selected line in the menu
+void menu::menuCursor(int cursorPos, int bufferLength, char *bufferLine1, char *bufferLine2)
+{
+    if ((bufferLine1[0] != '>') && (bufferLine2[0] != '>')) // Prevent cursor from being printed twice
+    {
+        switch (cursorPos)
+        {
+        case 1:
+        case 3:
+        case 5:
+        case 7:
+        case 9:
+            snprintf(intermidiateBuffer, bufferLength, ">%s", bufferLine1);
+            snprintf(bufferLine1, bufferLength, "%s", intermidiateBuffer);
+            break;
+        case 2:
+        case 4:
+        case 6:
+        case 8:
+        case 10:
+            snprintf(intermidiateBuffer, bufferLength, ">%s", bufferLine2);
+            snprintf(bufferLine2, bufferLength, "%s", intermidiateBuffer);
+            break;
+
+        default:
+            break;
+        }
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////  MENU LAYOUT  ////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/*
+Menu wish list:
+- 1. Settings KofH
+    - 1.1. Points to win
+    - 1.2. Number of teams
+    - 1.3. Game duration
+    - 1.4. Delayed start time
+- 2. Settings Bomb Defusal
+    - 2.1. Defusal time
+    - 2.2. Game duration
+    - 2.3. Delayed start down time
+- 3. Save */
+
+// Menu switch structure. Also displays menu to LCD display
+void menu::menuDisplay(int &cursorPos, int subM1, int subM2)
+{
+    static char bufferLine1[BUFFERLENGTH];
+    static char bufferLine2[BUFFERLENGTH];
+
+    if (subM1 == 0)
+    {
+        switch (cursorPos)
+        {
+        case 1:
+        case 2:
+            snprintf(bufferLine1, BUFFERLENGTH, "1. Settings KofH");
+            snprintf(bufferLine2, BUFFERLENGTH, "2. Settings Bomb");
+            break;
+        case 3:
+        case 4:
+            snprintf(bufferLine1, BUFFERLENGTH, "3. Save changes");
+            snprintf(bufferLine2, BUFFERLENGTH, "4. Set default");
+            break;
+        default:
+            uint8_t maxlength = 4;
+            cursorPos = (cursorPos > maxlength) ? maxlength : 1;
+            break;
+        }
+        menuCursor(cursorPos, BUFFERLENGTH, bufferLine1, bufferLine2);
+    }
+
+    // ----------------- Menu 1.x --------------------------------
+    else if ((subM1 == 1) && (subM2 == 0))
+    {
+        switch (cursorPos)
+        {
+        case 1:
+        case 2:
+            snprintf(bufferLine1, BUFFERLENGTH, "1.1 PointsToWin");
+            snprintf(bufferLine2, BUFFERLENGTH, "1.2 Teams");
+
+            break;
+        case 3:
+        case 4:
+            snprintf(bufferLine1, BUFFERLENGTH, "1.3 Duration");
+            snprintf(bufferLine2, BUFFERLENGTH, "1.4 DelayToStart");
+            break;
+        case 5:
+        case 6:
+            snprintf(bufferLine1, BUFFERLENGTH, "1.5 -----");
+            snprintf(bufferLine2, BUFFERLENGTH, "1.6 -----");
+            break;
+        default:
+            uint8_t maxlength = 6;
+            cursorPos = (cursorPos > maxlength) ? maxlength : 1;
+            break;
+        }
+        menuCursor(cursorPos, BUFFERLENGTH, bufferLine1, bufferLine2);
+    }
+    // Menu 1.x actions:
+    else if ((subM1 == 1) && (subM2 == 1))
+    {
+        if (last_cursorPos != cursorPos)
+        {
+            s_KofH_pointsToWin = s_KofH_pointsToWin + (cursorPos > last_cursorPos ? -20 : 20);
+        }
+        snprintf(bufferLine1, BUFFERLENGTH, "1.1 PointsToWin");
+        snprintf(bufferLine2, BUFFERLENGTH, "  > %d", s_KofH_pointsToWin);
+    }
+    else if ((subM1 == 1) && (subM2 == 2))
+    {
+        if (last_cursorPos != cursorPos)
+        {
+            s_KofH_numberOfTeams = s_KofH_numberOfTeams + (cursorPos > last_cursorPos ? -1 : 1);
+            if (s_KofH_numberOfTeams < 2)
+            {
+                s_KofH_numberOfTeams = 2; // Minimum 2 teams
+                cursorPos--;
+            }
+            else if (s_KofH_numberOfTeams > 4)
+            {
+                s_KofH_numberOfTeams = 4; // Maximum 4 teams
+                cursorPos++;
+            }
+        }
+        snprintf(bufferLine1, BUFFERLENGTH, "1.2 Teams");
+        snprintf(bufferLine2, BUFFERLENGTH, "  > %d", s_KofH_numberOfTeams);
+    }
+    else if ((subM1 == 1) && (subM2 == 3))
+    {
+        if (last_cursorPos != cursorPos)
+        {
+            s_KofH_gameDuration = s_KofH_gameDuration + (cursorPos > last_cursorPos ? -30 : 30);
+            if (s_KofH_gameDuration < 0)
+            {
+                s_KofH_gameDuration = 0; // No negative values
+                last_cursorPos = cursorPos;
+            }
+        }
+        snprintf(bufferLine1, BUFFERLENGTH, "1.3 Duration");
+        snprintf(bufferLine2, BUFFERLENGTH, "  > %dmin %ds", s_KofH_gameDuration/60, s_KofH_gameDuration%60);
+    }
+    else if ((subM1 == 1) && (subM2 == 4))
+    {
+        if (last_cursorPos != cursorPos)
+        {
+            s_KofH_delayedStartTime = s_KofH_delayedStartTime + (cursorPos > last_cursorPos ? -10 : 10);
+            if (s_KofH_delayedStartTime < 0)
+            {
+                s_KofH_delayedStartTime = 0; // No negative values
+                last_cursorPos = cursorPos;
+            }
+        }
+        snprintf(bufferLine1, BUFFERLENGTH, "1.4 DelayToStart");
+        snprintf(bufferLine2, BUFFERLENGTH, "  > %ds", s_KofH_delayedStartTime);
+    }
+
+    // ----------------- Menu 2.x --------------------------------
+    else if ((subM1 == 2) && (subM2 == 0))
+    {
+        switch (cursorPos)
+        {
+        case 1:
+        case 2:
+            snprintf(bufferLine1, BUFFERLENGTH, "2.1 Defusal time");
+            snprintf(bufferLine2, BUFFERLENGTH, "2.2 Duration");
+            break;
+        case 3:
+        case 4:
+            snprintf(bufferLine1, BUFFERLENGTH, "2.3 DelayToStart");
+            snprintf(bufferLine2, BUFFERLENGTH, "2.4 -----");
+            break;
+
+        default:
+            uint8_t maxlength = 4;
+            cursorPos = (cursorPos > maxlength) ? maxlength : 1;
+            break;
+        }
+        menuCursor(cursorPos, BUFFERLENGTH, bufferLine1, bufferLine2);
+    }
+
+    // ----------------- Menu 3.x --------------------------------
+    else if ((subM1 == 3) && (subM2 == 0))
+    {
+        FLAG_forMenu_back = true;
+        settings_save();
+
+        snprintf(bufferLine1, BUFFERLENGTH, "Settings saved");
+        snprintf(bufferLine2, BUFFERLENGTH, " ");
+        FLAG_shortFreeze = true;
+    }
+
+    // ----------------- Menu 4.x --------------------------------
+    else if ((subM1 == 4) && (subM2 == 0))
+    {
+        snprintf(bufferLine1, BUFFERLENGTH, "Set all default?"); // Header at line 1
+        switch (cursorPos)
+        {
+        case 1:
+            snprintf(bufferLine2, BUFFERLENGTH, "4.1 No"); // Line 2 (Y/N - line)
+            break;
+        case 2:
+            snprintf(bufferLine2, BUFFERLENGTH, "4.2 Yes"); // Line 2 (Y/N - line)
+            break;
+
+        default:
+            uint8_t maxlength = 2;
+            cursorPos = (cursorPos > maxlength) ? maxlength : 1;
+            break;
+        }
+        menuCursor(2, BUFFERLENGTH, bufferLine1, bufferLine2); // Force cursor to be on second line (Y/N - line)
+    }
+
+    // Menu 4.x actions:
+    else if ((subM1 == 4) && (subM2 == 1))
+    {
+        FLAG_forMenu_back = true;
+    }
+    else if ((subM1 == 4) && (subM2 == 2))
+    {
+        FLAG_forMenu_back = true;
+        EEPROM.write(adr_s_Settings_initiated, 0);
+        settings_initiateDefault();
+
+        snprintf(bufferLine1, BUFFERLENGTH, "Default settings");
+        snprintf(bufferLine2, BUFFERLENGTH, "saved");
+        FLAG_shortFreeze = true;
+    }
+
+    if (subM2 != 0)
+    {
+        // sdsd
+    }
+
+    // LCD print
+    lcd.setBacklight(155);
+    lcd.home();
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print(bufferLine1);
+    lcd.setCursor(0, 1);
+    lcd.print(bufferLine2);
+
+    Serial.println(bufferLine1);
+    Serial.println(bufferLine2);
+    Serial.println("Cursor: " + String(cursorPos) + "Last Cursor: " + String(last_cursorPos) + " SubM1: " + String(subM1) + " SubM2: " + String(subM2));
+    Serial.println("");
+    if (FLAG_shortFreeze)
+    {
+        delay(2000);
+        FLAG_shortFreeze = false;
+    }
+}
+  
