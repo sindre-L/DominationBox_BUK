@@ -158,13 +158,13 @@ void setup()
 
   // Segment display setup
   // Display testing-code here
-  display1.setBrightness(0x0f);
+  display1.setBrightness(0x03);
   display1.showNumberDec(0001);
-  display2.setBrightness(0x0f);
+  display2.setBrightness(0x03);
   display2.showNumberDec(0002);
-  display3.setBrightness(0x0f);
+  display3.setBrightness(0x03);
   display3.showNumberDec(0003);
-  display4.setBrightness(0x0f);
+  display4.setBrightness(0x03);
   display4.showNumberDec(0004);
   // Segment display setup end
 
@@ -189,7 +189,7 @@ void setup()
   }
 
   // Set display text
-  lcd.setBacklight(155);
+  lcd.setBacklight(0);
   lcd.home();
   lcd.clear();
   lcd.setCursor(0, 0);
