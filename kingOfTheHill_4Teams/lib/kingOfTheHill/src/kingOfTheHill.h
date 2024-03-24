@@ -43,7 +43,7 @@ public:
         uint8_t numberOfTeams = 4;
         bool activeTeams[4] = {true, true, true, true};
         // settings_KofH.TeamColourRGBW first index: Team(neut,1,2,3,4), second index: colour(R, G, B, W) with value 0-255
-        uint8_t teamColourRGBW[5][4] = {{0, 255, 0, 0}, {255, 0, 0, 0}, {0, 0, 255, 0}, {255, 30, 0, 0}, {155, 155, 155, 255}};
+        uint8_t teamColourRGBW[5][4] = {{255, 0, 255, 255}, {055, 165, 255, 255},{100, 100, 100, 255}, {255, 255, 0, 255}, {0, 255, 255, 255}};
 
         void reset_KofH(void);
         int kingOfTheHill(void);

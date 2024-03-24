@@ -61,14 +61,14 @@ This code is the property of Sindre Lindberg and may not be used, copied, or dis
 #define LCD0_J113_9 34
 #define LCD0_J113_10 35
 
-#define LCD_1_DIO LCD0_J113_1 // DIO display 1
-#define LCD_1_CLK LCD0_J113_2 // CLK display 1
-#define LCD_2_DIO LCD0_J113_3 // DIO display 2
-#define LCD_2_CLK LCD0_J113_4 // CLK display 2
-#define LCD_3_DIO LCD0_J113_5 // DIO display 3
-#define LCD_3_CLK LCD0_J113_6 // CLK display 3
-#define LCD_4_DIO LCD0_J113_7 // DIO display 4
-#define LCD_4_CLK LCD0_J113_8 // CLK display 4
+#define LCD_1_DIO LCD0_J113_2 // DIO display 1
+#define LCD_1_CLK LCD0_J113_1 // CLK display 1
+#define LCD_2_DIO LCD0_J113_4 // DIO display 2
+#define LCD_2_CLK LCD0_J113_3 // CLK display 2
+#define LCD_3_DIO LCD0_J113_6 // DIO display 3
+#define LCD_3_CLK LCD0_J113_5 // CLK display 3
+#define LCD_4_DIO LCD0_J113_8 // DIO display 4
+#define LCD_4_CLK LCD0_J113_7 // CLK display 4
 TM1637Display display1(LCD_1_CLK, LCD_1_DIO);
 TM1637Display display2(LCD_2_CLK, LCD_2_DIO);
 TM1637Display display3(LCD_3_CLK, LCD_3_DIO);
@@ -142,8 +142,8 @@ void setup()
 
   myMenu.MENU_BUTTON_ENTER = TEAM_BUTTON_2;
   myMenu.MENU_BUTTON_BACK = TEAM_BUTTON_4;
-  myMenu.MENU_BUTTON_UP = TEAM_BUTTON_1;
-  myMenu.MENU_BUTTON_DOWN = TEAM_BUTTON_3;
+  myMenu.MENU_BUTTON_UP = TEAM_BUTTON_3; 
+  myMenu.MENU_BUTTON_DOWN = TEAM_BUTTON_1;
   myMenu.MENU_BUTTON_1 = TEAM_BUTTON_1;
   myMenu.MENU_BUTTON_2 = TEAM_BUTTON_2;
   myMenu.MENU_BUTTON_3 = TEAM_BUTTON_3;
@@ -187,6 +187,7 @@ void setup()
     FLAG_EnterMenu = true;
     settings_initiateDefault();
   }
+  //initiateDefault();
 
   // Set display text
   lcd.setBacklight(0);
@@ -200,6 +201,7 @@ void setup()
 
 void loop()
 {
+  game::digitalWrite_OFF_ToExtLED();
   // If benu-button is pressed at power-up, enter menu. Restart device to enter game-mode.
   if (FLAG_EnterMenu)
   {
@@ -227,6 +229,13 @@ void loop()
 
     for (;;)
     {
+      if (digitalRead(TEAM_BUTTON_1) && digitalRead(TEAM_BUTTON_2) && digitalRead(TEAM_BUTTON_3) && digitalRead(TEAM_BUTTON_4)){
+        myGame.FLAG_gameEnded = true;
+      }
+      
+      digitalWrite(EXTERNAL_LED_J103_W, HIGH);
+
+
       static int delayTime = s_KofH_delayedStartTime;
       if (delayTime > 0)
       {

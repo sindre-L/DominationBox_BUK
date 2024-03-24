@@ -34,14 +34,14 @@ void settings_initiateDefault()
 {
     if (EEPROM.read(adr_s_Settings_initiated) != 111)
     {
-        s_KofH_delayedStartTime = 60;
-        s_KofH_gameDuration = 1200;
+        s_KofH_delayedStartTime = 5;
+        s_KofH_gameDuration = 2400;
         s_KofH_numberOfTeams = 4;
         s_KofH_activeTeams[0] = true;
         s_KofH_activeTeams[1] = true;
         s_KofH_activeTeams[2] = true;
         s_KofH_activeTeams[3] = true;
-        s_KofH_pointsToWin = 800;
+        s_KofH_pointsToWin = 2400;
         settings_save();
         EEPROM.write(adr_s_Settings_initiated, 111);
     }

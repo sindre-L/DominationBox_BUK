@@ -263,17 +263,17 @@ void game::analogWrite_Team_ToExtLED(uint8_t teamColour_RGBW[5][4], Teams team)
     analogWrite(PIN_EXT_LED_R, teamColour_RGBW[team][0]); // Red
     analogWrite(PIN_EXT_LED_G, teamColour_RGBW[team][1]); // Green
     analogWrite(PIN_EXT_LED_B, teamColour_RGBW[team][2]); // Blue
-    analogWrite(PIN_EXT_LED_W, teamColour_RGBW[team][3]); // White
+                                                          // analogWrite(PIN_EXT_LED_W, teamColour_RGBW[team][3]); // White
     return;
 }
 
 // Set LED-strip off
 void game::digitalWrite_OFF_ToExtLED()
 {
-    digitalWrite(PIN_EXT_LED_R, 0); // Red
-    digitalWrite(PIN_EXT_LED_G, 0); // Green
-    digitalWrite(PIN_EXT_LED_B, 0); // Blue
-    digitalWrite(PIN_EXT_LED_W, 0); // White
+    digitalWrite(PIN_EXT_LED_R, HIGH); // Red
+    digitalWrite(PIN_EXT_LED_G, HIGH); // Green
+    digitalWrite(PIN_EXT_LED_B, HIGH); // Blue
+    digitalWrite(PIN_EXT_LED_W, HIGH); // White
     return;
 }
 
