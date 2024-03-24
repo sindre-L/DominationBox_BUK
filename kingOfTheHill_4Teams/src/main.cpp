@@ -229,13 +229,15 @@ void loop()
 
     for (;;)
     {
+      // Optiojn to manually end game by pressing all team-buttons at once
       if (digitalRead(TEAM_BUTTON_1) && digitalRead(TEAM_BUTTON_2) && digitalRead(TEAM_BUTTON_3) && digitalRead(TEAM_BUTTON_4)){
         myGame.FLAG_gameEnded = true;
       }
       
+      // Set white off, is currently not used at all (RGB LEDs are used instead)
       digitalWrite(EXTERNAL_LED_J103_W, HIGH);
 
-
+      // Delayed start
       static int delayTime = s_KofH_delayedStartTime;
       if (delayTime > 0)
       {
@@ -251,6 +253,7 @@ void loop()
         (delayTime % 2 == 0) ? game::analogWrite_Team_ToExtLED(myGame.teamColourRGBW, game::Neutral) : game::digitalWrite_OFF_ToExtLED();
         delay(500);
       }
+      // Game running after delayed start
       else
       {
 
