@@ -19,10 +19,11 @@ This code is the property of Sindre Lindberg and may not be used, copied, or dis
 #define PIN_EXT_LED_B 6
 #define PIN_EXT_LED_W 7
 
-#define PIN_TEAM1_BUTTON A0 // Assume pins 5-8 are set as input.
-#define PIN_TEAM2_BUTTON A1
-#define PIN_TEAM3_BUTTON A2
-#define PIN_TEAM4_BUTTON A3
+// School stuff; Pin numbers for buttons changed to A8-A11
+#define PIN_TEAM1_BUTTON A8 //A0 // Assume pins 5-8 are set as input.
+#define PIN_TEAM2_BUTTON A9 //A1
+#define PIN_TEAM3_BUTTON A10 //A2
+#define PIN_TEAM4_BUTTON A11 //A3
 
 /* extern uint8_t PIN_EXT_LED_R;
 extern uint8_t PIN_EXT_LED_G;

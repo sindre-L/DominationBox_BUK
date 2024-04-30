@@ -18,6 +18,17 @@ This code is the property of Sindre Lindberg and may not be used, copied, or dis
 #include <LiquidCrystal_PCF8574.h> // For I2C LCD
 #include <TM1637Display.h>         // For 7-segment displays
 
+// School stuff
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+#define SCREEN_WIDTH 128 // OLED display width, in pixels
+#define SCREEN_HEIGHT 64 // OLED display height, in pixels
+// Declaration for an SSD1306 display connected to I2C (SDA, SCL pins)
+#define OLED_RESET 4 // Reset pin # (or -1 if sharing Arduino reset pin)
+Adafruit_SSD1306 displayOLED1(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+Adafruit_SSD1306 displayOLED2(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+//
+
 #define INTERNAL_LED0_J101_R 8
 #define INTERNAL_LED0_J101_G 9
 #define INTERNAL_LED0_J101_B 10
@@ -31,10 +42,11 @@ This code is the property of Sindre Lindberg and may not be used, copied, or dis
 #define EXTERNAL_LED_J103_B 6
 #define EXTERNAL_LED_J103_W 7
 
-#define TEAM_BUTTON_1 A0
-#define TEAM_BUTTON_2 A1
-#define TEAM_BUTTON_3 A2
-#define TEAM_BUTTON_4 A3
+// School stuff; Pin numbers for buttons changed to A8-A11
+#define TEAM_BUTTON_1 A8 //A0
+#define TEAM_BUTTON_2 A9 //A1
+#define TEAM_BUTTON_3 A10 //A2
+#define TEAM_BUTTON_4 A11 //A3
 
 #define STOP_BUTTON A4
 
@@ -118,6 +130,39 @@ bool FLAG_EnterMenu = false;
 
 void setup()
 {
+  // School stuff
+  if (!displayOLED1.begin(SSD1306_SWITCHCAPVCC, 0x3C))
+  { // Address 0x3D for 128x64
+    Serial.println(F("SSD1306 allocation failed"));
+    for (;;)
+      ; // Don't proceed, loop forever
+  }
+  if (!displayOLED2.begin(SSD1306_SWITCHCAPVCC, 0x3D))
+  { // Address 0x3D for 128x64
+    Serial.println(F("SSD1306 allocation failed"));
+    for (;;)
+      ; // Don't proceed, loop forever
+  }
+  displayOLED1.clearDisplay();
+  displayOLED1.setTextSize(2);      // The fontsize
+  displayOLED1.setTextColor(WHITE); // Draw white text
+  displayOLED1.setCursor(45, 0);
+  displayOLED1.println("Team"); // Print text
+  displayOLED1.setTextSize(4);  // The fontsize
+  displayOLED1.setCursor(55, 30);
+  displayOLED1.println("1"); // Print text
+  displayOLED2.clearDisplay();
+  displayOLED2.setTextSize(2);      // The fontsize
+  displayOLED2.setTextColor(WHITE); // Draw white text
+  displayOLED2.setCursor(45, 0);
+  displayOLED2.println("Team"); // Print text
+  displayOLED2.setTextSize(5);  // The fontsize
+  displayOLED2.setCursor(52, 30);
+  displayOLED2.println("2"); // Print text
+  displayOLED1.display();
+  displayOLED2.display();
+  //
+
   // put your setup code here, to run once:
   pinMode(INTERNAL_LED0_J101_R, OUTPUT);
   pinMode(INTERNAL_LED0_J101_G, OUTPUT);
@@ -142,7 +187,7 @@ void setup()
 
   myMenu.MENU_BUTTON_ENTER = TEAM_BUTTON_2;
   myMenu.MENU_BUTTON_BACK = TEAM_BUTTON_4;
-  myMenu.MENU_BUTTON_UP = TEAM_BUTTON_3; 
+  myMenu.MENU_BUTTON_UP = TEAM_BUTTON_3;
   myMenu.MENU_BUTTON_DOWN = TEAM_BUTTON_1;
   myMenu.MENU_BUTTON_1 = TEAM_BUTTON_1;
   myMenu.MENU_BUTTON_2 = TEAM_BUTTON_2;
@@ -187,10 +232,10 @@ void setup()
     FLAG_EnterMenu = true;
     settings_initiateDefault();
   }
-  //initiateDefault();
+  // initiateDefault();
 
   // Set display text
-  lcd.setBacklight(0);
+  lcd.setBacklight(255); // School stuff; Set backlight to full (was at 0)
   lcd.home();
   lcd.clear();
   lcd.setCursor(0, 0);
@@ -201,6 +246,7 @@ void setup()
 
 void loop()
 {
+
   game::digitalWrite_OFF_ToExtLED();
   // If benu-button is pressed at power-up, enter menu. Restart device to enter game-mode.
   if (FLAG_EnterMenu)
@@ -233,7 +279,7 @@ void loop()
       /* if (digitalRead(TEAM_BUTTON_1) && digitalRead(TEAM_BUTTON_2) && digitalRead(TEAM_BUTTON_3) && digitalRead(TEAM_BUTTON_4)){
         myGame.FLAG_gameEnded = true;
       } */
-      
+
       // Set white off, is currently not used at all (RGB LEDs are used instead)
       digitalWrite(EXTERNAL_LED_J103_W, HIGH);
 
@@ -269,12 +315,23 @@ void loop()
           myGame.activeTeams[1] ? display2.showNumberDec(myGame.pointsTeam2) : display2.setSegments(customSegment_OFF);
           myGame.activeTeams[2] ? display3.showNumberDec(myGame.pointsTeam3) : display3.setSegments(customSegment_OFF);
           myGame.activeTeams[3] ? display4.showNumberDec(myGame.pointsTeam4) : display4.setSegments(customSegment_OFF);
-          
+          // School stuff
+          displayOLED1.clearDisplay();
+          displayOLED2.clearDisplay();
+          displayOLED1.setTextSize(3);
+          displayOLED2.setTextSize(3);
+          displayOLED1.setCursor(30, 30);
+          displayOLED2.setCursor(30, 30);
+          displayOLED1.println(myGame.pointsTeam1);
+          displayOLED2.println(myGame.pointsTeam2);
+          displayOLED1.display();
+          displayOLED2.display();
+          //
 
-       /*    display1.showNumberDec(myGame.pointsTeam1);
-          display2.showNumberDec(myGame.pointsTeam2);
-          display3.showNumberDec(myGame.pointsTeam3);
-          display4.showNumberDec(myGame.pointsTeam4); */
+          /*    display1.showNumberDec(myGame.pointsTeam1);
+             display2.showNumberDec(myGame.pointsTeam2);
+             display3.showNumberDec(myGame.pointsTeam3);
+             display4.showNumberDec(myGame.pointsTeam4); */
 
           // Update LCD
           if (myGame.FLAG_gameEnded)
