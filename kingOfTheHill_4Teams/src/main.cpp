@@ -190,19 +190,19 @@ void setup()
   //initiateDefault();
 
   // Set display text
-  lcd.setBacklight(0);
+  lcd.setBacklight(1);
   lcd.home();
   lcd.clear();
   lcd.setCursor(0, 0);
-  lcd.print("Press button for");
+  lcd.print("Press 1 to start");
   lcd.setCursor(0, 1);
-  lcd.print("Team 1 to start");
+  lcd.print("   KofH game");
 }
 
 void loop()
 {
   game::digitalWrite_OFF_ToExtLED();
-  // If benu-button is pressed at power-up, enter menu. Restart device to enter game-mode.
+  // If any button is pressed at power-up, enter menu. Restart device to enter game-mode.
   if (FLAG_EnterMenu)
   {
     lcd.clear();
