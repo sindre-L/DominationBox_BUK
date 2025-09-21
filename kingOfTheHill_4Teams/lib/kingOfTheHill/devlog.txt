@@ -1,0 +1,5 @@
+marh 17, 17:40
+    - Lagt til kode, slik at ext LED lyser team-farge med en gang knapp blir trykket ned
+    (for å unngå delay som er ved ext LED pwr save mode)
+
+    

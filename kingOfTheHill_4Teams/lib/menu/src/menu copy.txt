@@ -442,13 +442,13 @@ void menu::menuDisplay(int &cursorPos, int subM1, int subM2)
         {
         case 1:
         case 2:
-            snprintf(bufferLine1, BUFFERLENGTH, "2.1 GameDuration");
-            snprintf(bufferLine2, BUFFERLENGTH, "2.2 BombTimer");
+            snprintf(bufferLine1, BUFFERLENGTH, "2.1 Defusal time");
+            snprintf(bufferLine2, BUFFERLENGTH, "2.2 Duration");
             break;
         case 3:
         case 4:
             snprintf(bufferLine1, BUFFERLENGTH, "2.3 DelayToStart");
-            snprintf(bufferLine2, BUFFERLENGTH, "2.4 Arm/Disarm t");
+            snprintf(bufferLine2, BUFFERLENGTH, "2.4 -----");
             break;
 
         default:
@@ -457,63 +457,6 @@ void menu::menuDisplay(int &cursorPos, int subM1, int subM2)
             break;
         }
         menuCursor(cursorPos, BUFFERLENGTH, bufferLine1, bufferLine2);
-    }
-    // ---------- Menu 2.x actions:
-    else if ((subM1 == 2) && (subM2 == 1))
-    {
-        if (last_cursorPos != cursorPos)
-        {
-            s_armDisarm_gameDuration = s_armDisarm_gameDuration + (cursorPos > last_cursorPos ? -30 : 30);
-            if (s_armDisarm_gameDuration < 0)
-            {
-                s_armDisarm_gameDuration = 0; // No negative values
-                last_cursorPos = cursorPos;
-            }
-        }
-        snprintf(bufferLine1, BUFFERLENGTH, "2.1 GameDuration");
-        snprintf(bufferLine2, BUFFERLENGTH, "  > %dmin %ds", s_armDisarm_gameDuration / 60, s_armDisarm_gameDuration % 60);
-    }
-    else if ((subM1 == 2) && (subM2 == 2))
-    {
-        if (last_cursorPos != cursorPos)
-        {
-            s_armDisarm_defendTime = s_armDisarm_defendTime + (cursorPos > last_cursorPos ? -30 : 30);
-            if (s_armDisarm_defendTime < 0)
-            {
-                s_armDisarm_defendTime = 0; // No negative values
-                last_cursorPos = cursorPos;
-            }
-        }
-        snprintf(bufferLine1, BUFFERLENGTH, "2.2 BombTimer");
-        snprintf(bufferLine2, BUFFERLENGTH, "  > %dmin %ds", s_armDisarm_defendTime / 60, s_armDisarm_defendTime % 60);
-    }
-    else if ((subM1 == 2) && (subM2 == 3))
-    {
-        if (last_cursorPos != cursorPos)
-        {
-            s_armDisarm_delayedStartTime = s_armDisarm_delayedStartTime + (cursorPos > last_cursorPos ? -10 : 10);
-            if (s_armDisarm_delayedStartTime < 0)
-            {
-                s_armDisarm_delayedStartTime = 0; // No negative values
-                last_cursorPos = cursorPos;
-            }
-        }
-        snprintf(bufferLine1, BUFFERLENGTH, "2.3 DelayToStart");
-        snprintf(bufferLine2, BUFFERLENGTH, "  > %ds", s_armDisarm_delayedStartTime);
-    }
-    else if ((subM1 == 2) && (subM2 == 4))
-    {
-        if (last_cursorPos != cursorPos)
-        {
-            s_armDisarm_disarmTime = s_armDisarm_disarmTime + (cursorPos > last_cursorPos ? -1 : 1);
-            if (s_armDisarm_disarmTime < 0)
-            {
-                s_armDisarm_disarmTime = 0; // No negative values
-                last_cursorPos = cursorPos;
-            }
-        }
-        snprintf(bufferLine1, BUFFERLENGTH, "Arm/Disarm time");
-        snprintf(bufferLine2, BUFFERLENGTH, "  > %ds", s_armDisarm_disarmTime);
     }
 
     // ----------------- Menu 3.x --------------------------------

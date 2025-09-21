@@ -5,18 +5,18 @@ Some usefull text about this messy function
 #define kingOfTheHill_h
 
 #include "Arduino.h"
-#include <kingOfTheHill.h>
+#include <kingOfTheHill.h> 
 
 class game
 {
 public:
     enum Teams
     {
-        Neutral,
-        Team1,
-        Team2,
-        Team3,
-        Team4
+        Neutral, // Green Colour
+        Team1, // Yellow
+        Team2, // White
+        Team3, // Blue
+        Team4  // Red
     };
 
     // put function declarations here:
@@ -44,7 +44,6 @@ public:
         bool activeTeams[4] = {true, true, true, true};
         // settings_KofH.TeamColourRGBW first index: Team(neut,1,2,3,4), second index: colour(R, G, B, W) with value 0-255
         uint8_t teamColourRGBW[5][4] = {{255, 0, 255, 255}, {055, 165, 255, 255},{100, 100, 100, 255}, {255, 255, 0, 255}, {0, 255, 255, 255}};
-
         void reset_KofH(void);
         int kingOfTheHill(void);
     };

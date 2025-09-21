@@ -12,6 +12,7 @@ This code is the property of Sindre Lindberg and may not be used, copied, or dis
 
 #include <Arduino.h>
 #include <kingOfTheHill.h> // Project specific
+#include <armDisarm.h>     // Project specific
 #include <menu.h>          // Project specific
 #include <settings.h>      // Project specific
 #include <Wire.h>
@@ -88,6 +89,7 @@ TM1637Display display4(LCD_4_CLK, LCD_4_DIO);
 #define SMOKE_PIN 25
 
 game::KofH myGame;
+armdisarm armDisarm;
 menu myMenu;
 
 // Dispaly stuff
@@ -100,6 +102,16 @@ byte dotOn[] = {0b00000, 0b01110, 0b11111, 0b11111, // Custom Character for dot
 // Custom 7-segment display symbols/characters
 uint8_t customSegment_ON[4] = {0b0000000, 0b0111111, 0b1010100, 0b0000000};
 uint8_t customSegment_OFF[4] = {0b0000000, 0b0111111, 0b1110001, 0b1110001};
+uint8_t customSegment_PrSS[4] = {0b1110011, 0b1010000, 0b1101101, 0b1101101};
+uint8_t customSegment_UPP[4] = {0b0000000, 0b0111110, 0b1110011, 0b1110011};
+uint8_t customSegment_Down[4] = {0b0111111, 0b1011100, 0b0011100, 0b1010100};
+uint8_t customSegment_Ent[4] = {0b0000000, 0b1111001, 0b1010100, 0b1111000};
+uint8_t customSegment_BACK[4] = {0b1111100, 0b1110111, 0b1011000, 0b1111001};
+
+// functions
+void setAllSegmentDisplaysNum(uint8_t value);
+void setAllSegmentDisplaysSym(uint8_t *value);
+bool TrueOnceASecond_main(void);
 
 // Extern functions and variables
 extern void settings_save();
@@ -142,7 +154,7 @@ void setup()
 
   myMenu.MENU_BUTTON_ENTER = TEAM_BUTTON_2;
   myMenu.MENU_BUTTON_BACK = TEAM_BUTTON_4;
-  myMenu.MENU_BUTTON_UP = TEAM_BUTTON_3; 
+  myMenu.MENU_BUTTON_UP = TEAM_BUTTON_3;
   myMenu.MENU_BUTTON_DOWN = TEAM_BUTTON_1;
   myMenu.MENU_BUTTON_1 = TEAM_BUTTON_1;
   myMenu.MENU_BUTTON_2 = TEAM_BUTTON_2;
@@ -184,19 +196,23 @@ void setup()
   // If a button is pressed, set Flag high, and enter "menu-mode" for access to settings.
   if (digitalRead(myMenu.MENU_BUTTON_ENTER) || digitalRead(myMenu.MENU_BUTTON_UP) || digitalRead(myMenu.MENU_BUTTON_DOWN) || digitalRead(myMenu.MENU_BUTTON_BACK))
   {
+    display1.setSegments(customSegment_UPP);
+    display2.setSegments(customSegment_Ent);
+    display3.setSegments(customSegment_Down);
+    display4.setSegments(customSegment_BACK);
     FLAG_EnterMenu = true;
     settings_initiateDefault();
   }
-  //initiateDefault();
+  // initiateDefault();
 
   // Set display text
   lcd.setBacklight(1);
   lcd.home();
   lcd.clear();
   lcd.setCursor(0, 0);
-  lcd.print("Press 1 to start");
+  lcd.print("Press 1 for KofH");
   lcd.setCursor(0, 1);
-  lcd.print("   KofH game");
+  lcd.print("2 for ArmDisarm");
 }
 
 void loop()
@@ -229,11 +245,11 @@ void loop()
 
     for (;;)
     {
-      // Optiojn to manually end game by pressing all team-buttons at once
+      // Option to manually end game by pressing all team-buttons at once
       /* if (digitalRead(TEAM_BUTTON_1) && digitalRead(TEAM_BUTTON_2) && digitalRead(TEAM_BUTTON_3) && digitalRead(TEAM_BUTTON_4)){
         myGame.FLAG_gameEnded = true;
       } */
-      
+
       // Set white off, is currently not used at all (RGB LEDs are used instead)
       digitalWrite(EXTERNAL_LED_J103_W, HIGH);
 
@@ -269,12 +285,11 @@ void loop()
           myGame.activeTeams[1] ? display2.showNumberDec(myGame.pointsTeam2) : display2.setSegments(customSegment_OFF);
           myGame.activeTeams[2] ? display3.showNumberDec(myGame.pointsTeam3) : display3.setSegments(customSegment_OFF);
           myGame.activeTeams[3] ? display4.showNumberDec(myGame.pointsTeam4) : display4.setSegments(customSegment_OFF);
-          
 
-       /*    display1.showNumberDec(myGame.pointsTeam1);
-          display2.showNumberDec(myGame.pointsTeam2);
-          display3.showNumberDec(myGame.pointsTeam3);
-          display4.showNumberDec(myGame.pointsTeam4); */
+          /*    display1.showNumberDec(myGame.pointsTeam1);
+             display2.showNumberDec(myGame.pointsTeam2);
+             display3.showNumberDec(myGame.pointsTeam3);
+             display4.showNumberDec(myGame.pointsTeam4); */
 
           // Update LCD
           if (myGame.FLAG_gameEnded)
@@ -326,6 +341,223 @@ void loop()
       }
     }
   }
+
+  if (digitalRead(TEAM_BUTTON_2))
+  {
+    // Initialize game settings
+    armDisarm.gameDuration = s_armDisarm_gameDuration;
+    armDisarm.defendTime = s_armDisarm_defendTime;
+    armDisarm.defendTimeLeft = armDisarm.defendTime;
+    armDisarm.disarmTime = s_armDisarm_disarmTime;
+    armDisarm.armTime = s_armDisarm_disarmTime;
+
+    for (;;)
+    {
+      // Option to manually end game by pressing all team-buttons at once
+      /* if (digitalRead(TEAM_BUTTON_1) && digitalRead(TEAM_BUTTON_2) && digitalRead(TEAM_BUTTON_3) && digitalRead(TEAM_BUTTON_4)){
+        myGame.FLAG_gameEnded = true;
+      } */
+
+      // Set white off, is currently not used at all (RGB LEDs are used instead)
+      digitalWrite(EXTERNAL_LED_J103_W, HIGH);
+
+      // Delayed start
+      static int delayTime = s_armDisarm_delayedStartTime;
+      if (delayTime > 0)
+      {
+        lcd.clear();
+        lcd.setCursor(0, 0);
+        lcd.print("Game starts in:");
+        lcd.setCursor(0, 1);
+        lcd.print(delayTime);
+        lcd.print("s");
+        delayTime--;
+        (delayTime % 2 == 0) ? game::analogWrite_Team_ToExtLED(myGame.teamColourRGBW, game::Neutral) : game::digitalWrite_OFF_ToExtLED();
+        delay(500);
+        (delayTime % 2 == 0) ? game::analogWrite_Team_ToExtLED(myGame.teamColourRGBW, game::Neutral) : game::digitalWrite_OFF_ToExtLED();
+        delay(500);
+      }
+      // Game running after delayed start
+      else
+      {
+
+        armDisarm.main_func(); // must run continuously during a game to update state and stats (is not a loop)
+
+        static uint32_t lastMillis = 0;
+        if (millis() - lastMillis > 500)
+        {
+          lastMillis = millis(); // update lastMillis
+
+          // Update LCD
+          if (armDisarm.FLAG_gameEnded)
+          {
+            lcd.clear();
+            lcd.setCursor(0, 0);
+            if (armDisarm.winningTeam == 0)
+            {
+              if (armDisarm.gameState == armdisarm::disarmed)
+              {
+                lcd.print("BOMB DISARMED!");
+                lcd.setCursor(0, 1);
+                lcd.print("CT won the game.");
+              }
+              else
+              {
+                lcd.print("BOMB not planted");
+                lcd.setCursor(0, 1);
+                lcd.print("CT won the game.");
+              }
+            }
+            else
+            {
+              lcd.print("BOMB EXPLODED!");
+              lcd.setCursor(0, 1);
+              lcd.print("Terrorists won.");
+            }
+          }
+          else
+          {
+            static bool showRemTime = false;
+            static int showRemGameTimeCnt = 0;
+            if ((armDisarm.gameTimeElapsed%2) == 0)
+            {
+              showRemGameTimeCnt++;
+              if (showRemGameTimeCnt == 6)
+              {
+                showRemTime = !showRemTime;
+              }
+              else if (showRemGameTimeCnt > 9)
+              {
+                showRemTime = !showRemTime;
+                showRemGameTimeCnt = 0;
+              }
+            }
+            lcd.clear();
+            lcd.setCursor(0, 0);
+            if (armDisarm.gameState == armdisarm::unarmed)
+            {
+              // Not armed.
+              if (armDisarm.arming)
+              {
+                int armingCntDown = armDisarm.counter_armByTime;
+                // arming in process
+                lcd.print("Keep holding ");
+                lcd.print(armingCntDown);
+                lcd.print("s");
+                lcd.setCursor(0, 1);
+                lcd.print("to arm the bomb.");
+                setAllSegmentDisplaysNum(armingCntDown);
+              }
+              else
+              {
+                if (showRemTime)
+                {
+                  // Show remaining game time in LCD display
+                  lcd.print("-- NOT ARMED  --");
+                  lcd.setCursor(0, 1);
+                  unsigned int gameTimeLeft = armDisarm.gameDuration - armDisarm.gameTimeElapsed;
+                  if (gameTimeLeft > 60)
+                  {
+                    lcd.print("Time left: ");
+                    lcd.print(gameTimeLeft / 60);
+                    lcd.print("min");
+                    setAllSegmentDisplaysSym(customSegment_PrSS);
+                  }
+                  else
+                  {
+                    lcd.print("Time left: ");
+                    lcd.print(gameTimeLeft);
+                    lcd.print("s");
+                    uint8_t secLeft = gameTimeLeft;  // cast to type uint8_t
+                    setAllSegmentDisplaysNum(secLeft); // show on all 7-segment displays
+                  }
+                }
+                else
+                {
+                  // Show arming info
+                  lcd.print("Hold 4 buttons");
+                  lcd.setCursor(0, 1);
+                  lcd.print("to arm the bomb.");
+                  setAllSegmentDisplaysSym(customSegment_PrSS);
+                }
+              }
+            }
+            else if (armDisarm.gameState == armdisarm::tobe_armed)
+            {
+              lcd.print("!!BOMB PLANTED!!");
+              lcd.setCursor(0, 1);
+              lcd.print(">Now defend it.<");
+              setAllSegmentDisplaysSym(customSegment_ON);
+            }
+            else if (armDisarm.gameState == armdisarm::armed) // TS have planted and armed bomb.
+            {
+              int disarmingCntDown = armDisarm.counter_disarmByTime;
+              if (armDisarm.disarming)
+              {
+                // disarming in process
+                lcd.print("Keep holding ");
+                lcd.print(disarmingCntDown);
+                lcd.print("s");
+                lcd.setCursor(0, 1);
+                lcd.print("to disarm bomb.");
+                setAllSegmentDisplaysNum(disarmingCntDown);
+              }
+              else
+              {
+                lcd.print("-- BOMB ARMED --");
+                lcd.setCursor(0, 1);
+                unsigned int defendTimeLeft = armDisarm.defendTimeLeft;
+                if (showRemTime or (defendTimeLeft < 60))
+                {
+                  // Show remaining game time in LCD display
+                  if (defendTimeLeft > 60)
+                  {
+                    lcd.print("Time left: ");
+                    lcd.print(defendTimeLeft / 60);
+                    lcd.print("min");
+                    setAllSegmentDisplaysSym(customSegment_PrSS);
+                  }
+                  else
+                  {
+                    lcd.print("Time left: ");
+                    lcd.print(defendTimeLeft);
+                    lcd.print("s");
+                    uint8_t secLeft = defendTimeLeft; // cast to type uint8_t
+                    setAllSegmentDisplaysNum(secLeft);  // show on all 7-segment displays
+                  }
+                }
+                else
+                {
+                  // Show disarming info
+                  lcd.print("!Hold to disarm!");
+                  setAllSegmentDisplaysSym(customSegment_PrSS);
+                }
+              }
+            }
+            else if (armDisarm.gameState == armdisarm::tobe_disarmed)
+            {
+              lcd.print("!BOMB DISARMED!");
+              lcd.setCursor(0, 1);
+              lcd.print("God work solider");
+              setAllSegmentDisplaysSym(customSegment_OFF);
+            }
+            else if (armDisarm.gameState == armdisarm::tobe_exploded)
+            {
+              lcd.print("!BOMB Exploded!");
+              lcd.setCursor(0, 1);
+              lcd.print("   GAME OVER   ");
+            }
+            else if (armDisarm.gameState == armdisarm::tobe_timeout)
+            {
+              lcd.print("!BOMB TIMEOUT!");
+              lcd.setCursor(0, 1);
+              lcd.print("     CT won     ");
+            }
+          }
+        }
+      }
+    }
+  }
   /*
   else if (digitalRead(TEAM_BUTTON_2))
   {
@@ -348,4 +580,36 @@ void loop()
       Serial.println("Button 4 pressed");
     }
   } */
+}
+
+// Set all 4 7-segment dispays to the same numeric value
+void setAllSegmentDisplaysNum(uint8_t value)
+{
+  display1.showNumberDec(value);
+  display2.showNumberDec(value);
+  display3.showNumberDec(value);
+  display4.showNumberDec(value);
+}
+
+// Set all 4 7-segment dispays to the same value
+void setAllSegmentDisplaysSym(uint8_t *value)
+{
+  display1.setSegments(value);
+  display2.setSegments(value);
+  display3.setSegments(value);
+  display4.setSegments(value);
+}
+
+// Returns true once every second
+bool TrueOnceASecond_main(void)
+{
+    static unsigned long previousMillis = 0;
+    static unsigned long currentMillis;
+    currentMillis = millis();
+    if (currentMillis - previousMillis >= 1000)
+    {
+        previousMillis = currentMillis;
+        return true;
+    }
+    return false;
 }

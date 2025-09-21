@@ -24,6 +24,7 @@ This code is the property of Sindre Lindberg and may not be used, copied, or dis
 #define PIN_TEAM3_BUTTON A2
 #define PIN_TEAM4_BUTTON A3
 
+
 /* extern uint8_t PIN_EXT_LED_R;
 extern uint8_t PIN_EXT_LED_G;
 extern uint8_t PIN_EXT_LED_B;
@@ -84,21 +85,25 @@ int game::KofH::kingOfTheHill(void)
         if ((digitalRead(PIN_TEAM1_BUTTON) == HIGH) && activeTeams[0])
         {
             inControlOfPoint = Team1;
+            analogWrite_Team_ToExtLED(teamColourRGBW, inControlOfPoint);
             // Serial.println("Team1");
         }
         if ((digitalRead(PIN_TEAM2_BUTTON) == HIGH) && activeTeams[1])
         {
             inControlOfPoint = Team2;
+            analogWrite_Team_ToExtLED(teamColourRGBW, inControlOfPoint);
             // Serial.println("Team2");
         }
         if ((digitalRead(PIN_TEAM3_BUTTON) == HIGH) && activeTeams[2])
         {
             inControlOfPoint = Team3;
+            analogWrite_Team_ToExtLED(teamColourRGBW, inControlOfPoint);
             // Serial.println("Team3");
         }
         if ((digitalRead(PIN_TEAM4_BUTTON) == HIGH) && activeTeams[3])
         {
             inControlOfPoint = Team4;
+            analogWrite_Team_ToExtLED(teamColourRGBW, inControlOfPoint);
             // Serial.println("Team4");
         }
     }
